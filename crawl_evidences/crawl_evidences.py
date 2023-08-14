@@ -1,9 +1,13 @@
+import time
+import torch
+from concurrent.futures import ThreadPoolExecutor
 from openai_api import *
 from parser import *
 from models_compare import *
-from concurrent.futures import ThreadPoolExecutor
-import time
-import torch
+from load_data import *
+
+nli_labels = ['contradiction', 'neutral', 'entailment']
+
 
 def generate_prompt(claim, evidences):
     prompt = "Justify the claim given the evidences. Point out the most 5 relevant evidences leading to the conclusion with the format: [Original evidence number]: [explanation]. The claim and evidences are in triple backticks"
@@ -42,23 +46,17 @@ def get_evidences(claim,model, k=20):
     best_candidates = [candidates[i] for i in np.argsort(scores)[::-1][:k]]
     return best_candidates
 
-
-if __name__ == '__main__':
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = CrossEncoder('../output/cross-encoder-distilroberta-base')
-    nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli').to(device)
-    tokenizer = AutoTokenizer.from_pretrained('facebook/bart-large-mnli')
-    nli_labels = [ 'contradiction', 'neutral' , 'entailment']
-    # scores = model.predict([["Donald Trump is the 1st president", "Obama is the first president"],
-    #                         ["Donald Trump is the 1st president", "Openness, understanding key to harmonious neighborhoods"]])
-    # url = 'http://fox13now.com/2013/12/30/new-year-new-laws-obamacare-pot-guns-and-drones/'
-    # res = parse_passages(url)
-
-    claim = "Roman Atwood is a content creator"
-    best_evidences = get_evidences(claim,model)
+def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
+    claim = claim_dict['claim']
+    print("Claim : ", claim)
+    best_evidences = get_evidences(claim, encoder_model)
     print("Evidences: ")
+    nli_labels_arr = []
+    num_contradiction = 0
+    num_neutral = 0
+    num_entailment = 0
     for e in best_evidences:
-        print(e)
+        # print(e)
         premise = e
         hypothesis = claim
         # run through model pre-trained on MNLI
@@ -70,9 +68,52 @@ if __name__ == '__main__':
         entail_contradiction_logits = logits
         probs = entail_contradiction_logits.softmax(dim=1)
         # prob_label_is_true = probs[:, 1]
-        print("entail_contradiction_logits   : ", entail_contradiction_logits)
-        print("probs   : ", probs)
-        print("nli_labels    : ", nli_labels[torch.argmax(probs)])
+        print("============================================================")
+        print("Claim : ", claim)
+        print("++++++++++++++++")
+        print("Evidence  :  :   :  ", e)
+        print("++++++++++++++++")
+        print("entail_contradiction_logits \t  : ", entail_contradiction_logits)
+        print("probs   \t \t \t : ", probs)
+        nli_labels_argmax = nli_labels[torch.argmax(probs)]
+        if nli_labels_argmax == "contradiction":
+            num_contradiction += 1
+        elif nli_labels_argmax == "neutral":
+            num_neutral += 1
+        elif nli_labels_argmax == "entailment":
+            num_entailment += 1
+        print("nli_labels   \t \t: ", nli_labels_argmax)
+        nli_labels_arr.append(nli_labels_argmax)
         # print("prob_label_is_true   : ", prob_label_is_true)
+        del probs, entail_contradiction_logits, logits, x
+    print("++++++++++++++++")
+    print("Claim : ", claim)
+    print("verifiable : ", claim_dict['verifiable'])
+    print("label : ", claim_dict['label'])
+    print("NLI labels ", nli_labels_arr)
+    print("NLI num_contradiction ", num_contradiction)
+    print("NLI num_neutral ", num_neutral)
+    print("NLI num_entailment ", num_entailment)
+    print("****************************************************************")
+    print("****************************************************************")
+    print("****************************************************************")
 
+
+if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    encoder_model = CrossEncoder('../output/cross-encoder-distilroberta-base')
+    nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli').to(device)
+    tokenizer = AutoTokenizer.from_pretrained('facebook/bart-large-mnli')
+    # scores = model.predict([["Donald Trump is the 1st president", "Obama is the first president"],
+    #                         ["Donald Trump is the 1st president", "Openness, understanding key to harmonious neighborhoods"]])
+    # url = 'http://fox13now.com/2013/12/30/new-year-new-laws-obamacare-pot-guns-and-drones/'
+    # res = parse_passages(url)
+
+    # claim = "Roman Atwood is a content creator"
+    # claim = 'Donald Trump is the richest president in US.'
+    # claim = "World-renowned singer Celine Dion died or revealed new personal health developments in late July 2023."
+
+    claims = load_fever_data()
+    for claim in claims:
+        process_claim(claim, encoder_model, nli_model, tokenizer)
 
