@@ -47,7 +47,14 @@ def get_evidences(claim,model, k=20):
     return best_candidates
 
 def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
-    claim = claim_dict['claim']
+    if type(claim_dict) is dict:
+        claim = claim_dict['claim']
+        verifiable = claim_dict['verifiable']
+        label = claim_dict['label']
+    else:
+        claim = claim_dict
+        verifiable = ""
+        label = ""
     print("Claim : ", claim)
     best_evidences = get_evidences(claim, encoder_model)
     print("Evidences: ")
@@ -88,8 +95,8 @@ def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
         del probs, entail_contradiction_logits, logits, x
     print("++++++++++++++++")
     print("Claim : ", claim)
-    print("verifiable : ", claim_dict['verifiable'])
-    print("label : ", claim_dict['label'])
+    print("verifiable : ",verifiable)
+    print("label : ", label)
     print("NLI labels ", nli_labels_arr)
     print("NLI num_contradiction ", num_contradiction)
     print("NLI num_neutral ", num_neutral)
@@ -97,7 +104,17 @@ def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
     print("****************************************************************")
     print("****************************************************************")
     print("****************************************************************")
-
+    if label == "SUPPORTS":
+        if num_entailment > num_contradiction:
+            return "tp"
+        else:
+            return "fp"
+    elif label == "REFUTES":
+        if num_entailment >= num_contradiction:
+            return "fn"
+        else:
+            return "tn"
+    return 0
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -111,9 +128,29 @@ if __name__ == '__main__':
 
     # claim = "Roman Atwood is a content creator"
     # claim = 'Donald Trump is the richest president in US.'
-    # claim = "World-renowned singer Celine Dion died or revealed new personal health developments in late July 2023."
+    # claims = ["World-renowned singer Celine Dion died or revealed new personal health developments in late July 2023."]
 
-    claims = load_fever_data()
+    claims = load_fever_data(num_claims= 10)
+    # print(claims)
+    # exit()
+    tp = 0
+    fp = 0
+    tn = 0
+    fn = 0
     for claim in claims:
-        process_claim(claim, encoder_model, nli_model, tokenizer)
-
+        value = process_claim(claim, encoder_model, nli_model, tokenizer)
+        if value == "tp":
+            tp += 1
+        elif value == "fp":
+            fp += 1
+        elif value == "tn":
+            tn += 1
+        elif value == "fn":
+            fn += 1
+    print("****************************************************************")
+    print("****************************************************************")
+    print("****************************************************************")
+    print("tp  : ",tp)
+    print("fp  : ",fp)
+    print("tn  : ",tn)
+    print("fn  : ",fn)
