@@ -4,7 +4,7 @@ from tqdm import tqdm
 
 np.random.seed(100)
 
-def load_fever_data(data_path = '../fever_2018/train.jsonl', num_claims = 100):
+def load_fever_data(data_path = './fever_2018/train.jsonl', num_claims = 100):
     claims = []
 
     with open(data_path, 'r') as fp:

@@ -118,7 +118,7 @@ def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
 
 if __name__ == '__main__':
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    encoder_model = CrossEncoder('../output/cross-encoder-distilroberta-base')
+    encoder_model = CrossEncoder('./output/cross-encoder-distilroberta-base')
     nli_model = AutoModelForSequenceClassification.from_pretrained('facebook/bart-large-mnli').to(device)
     tokenizer = AutoTokenizer.from_pretrained('facebook/bart-large-mnli')
     # scores = model.predict([["Donald Trump is the 1st president", "Obama is the first president"],
