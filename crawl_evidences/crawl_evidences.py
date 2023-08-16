@@ -1,10 +1,10 @@
 import time
 import torch
 from concurrent.futures import ThreadPoolExecutor
-from openai_api import *
-from parser import *
-from models_compare import *
-from load_data import *
+from .openai_api import *
+from .parser import *
+from .models_compare import *
+from .load_data import *
 
 nli_labels = ['contradiction', 'neutral', 'entailment']
 
@@ -46,7 +46,7 @@ def get_evidences(claim,model, k=20):
     best_candidates = [candidates[i] for i in np.argsort(scores)[::-1][:k]]
     return best_candidates
 
-def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
+def process_claim(claim_dict, encoder_model, nli_model, tokenizer,device="cpu", verbose=0):
     if type(claim_dict) is dict:
         claim = claim_dict['claim']
         verifiable = claim_dict['verifiable']
@@ -55,9 +55,9 @@ def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
         claim = claim_dict
         verifiable = ""
         label = ""
-    print("Claim : ", claim)
+    # print("Claim : ", claim)
     best_evidences = get_evidences(claim, encoder_model)
-    print("Evidences: ")
+    # print("Evidences: ")
     nli_labels_arr = []
     num_contradiction = 0
     num_neutral = 0
@@ -75,35 +75,38 @@ def process_claim(claim_dict, encoder_model, nli_model, tokenizer):
         entail_contradiction_logits = logits
         probs = entail_contradiction_logits.softmax(dim=1)
         # prob_label_is_true = probs[:, 1]
-        print("============================================================")
-        print("Claim : ", claim)
-        print("++++++++++++++++")
-        print("Evidence  :  :   :  ", e)
-        print("++++++++++++++++")
-        print("entail_contradiction_logits \t  : ", entail_contradiction_logits)
-        print("probs   \t \t \t : ", probs)
         nli_labels_argmax = nli_labels[torch.argmax(probs)]
+        if verbose >= 2:
+            print("============================================================")
+            print("Claim : ", claim)
+            print("++++++++++++++++")
+            print("Evidence  :  :   :  ", e)
+            print("++++++++++++++++")
+            print("entail_contradiction_logits \t  : ", entail_contradiction_logits)
+            print("probs   \t \t \t : ", probs)
+            print("nli_labels   \t \t: ", nli_labels_argmax)
+
         if nli_labels_argmax == "contradiction":
             num_contradiction += 1
         elif nli_labels_argmax == "neutral":
             num_neutral += 1
         elif nli_labels_argmax == "entailment":
             num_entailment += 1
-        print("nli_labels   \t \t: ", nli_labels_argmax)
         nli_labels_arr.append(nli_labels_argmax)
         # print("prob_label_is_true   : ", prob_label_is_true)
         del probs, entail_contradiction_logits, logits, x
-    print("++++++++++++++++")
-    print("Claim : ", claim)
-    print("verifiable : ",verifiable)
-    print("label : ", label)
-    print("NLI labels ", nli_labels_arr)
-    print("NLI num_contradiction ", num_contradiction)
-    print("NLI num_neutral ", num_neutral)
-    print("NLI num_entailment ", num_entailment)
-    print("****************************************************************")
-    print("****************************************************************")
-    print("****************************************************************")
+    if verbose >=1:
+        print("++++++++++++++++")
+        print("Claim : ", claim)
+        print("verifiable : ",verifiable)
+        print("label : ", label)
+        print("NLI labels ", nli_labels_arr)
+        print("NLI num_contradiction ", num_contradiction)
+        print("NLI num_neutral ", num_neutral)
+        print("NLI num_entailment ", num_entailment)
+        print("****************************************************************")
+        print("****************************************************************")
+        print("****************************************************************")
     if label == "SUPPORTS":
         if num_entailment > num_contradiction:
             return "tp"
