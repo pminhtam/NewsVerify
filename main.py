@@ -6,10 +6,8 @@
 import time
 import torch
 from concurrent.futures import ThreadPoolExecutor
-from crawl_evidences.openai_api import *
-from crawl_evidences.parser import *
-from crawl_evidences.models_compare import *
-from crawl_evidences.load_data import *
+
+from crawl_evidences.crawl_evidences import *
 
 nli_labels = ['contradiction', 'neutral', 'entailment']
 
