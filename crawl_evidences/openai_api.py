@@ -21,92 +21,23 @@ if __name__ == "__main__":
     
     The code following here 
     "
-    def var_func_vp(t, beta_min, beta_max):
-        log_mean_coeff = -0.25 * t ** 2 * \
-            (beta_max - beta_min) - 0.5 * t * beta_min
-        var = 1. - torch.exp(2. * log_mean_coeff)
-        return var
-    def extract(input, t, shape):
-        out = torch.gather(input, 0, t)
-        reshape = [shape[0]] + [1] * (len(shape) - 1)
-        out = out.reshape(*reshape)
-        return out
-    def get_sigma_schedule(beta_min, beta_max, n_timestep, device):
-        # n_timestep = args.num_timesteps
-        # beta_min = args.beta_min
-        # beta_max = args.beta_max
-        eps_small = 1e-3
-        t = np.arange(0, n_timestep + 1, dtype=np.float64)
-        t = t / n_timestep
-        t = torch.from_numpy(t) * (1. - eps_small) + eps_small
-        # if args.use_geometric:
-        #     var = var_func_geometric(t, beta_min, beta_max)
-        # else:
-        var = var_func_vp(t, beta_min, beta_max)
-        alpha_bars = 1.0 - var
-        betas = 1 - alpha_bars[1:] / alpha_bars[:-1]
-        first = torch.tensor(1e-8)
-        betas = torch.cat((first[None], betas)).to(device)
-        betas = betas.type(torch.float32)
-        sigmas = betas**0.5
-        a_s = torch.sqrt(1 - betas)
-        return sigmas, a_s, betas
-    class Posterior_Coefficients():
-        def __init__(self, beta_min, beta_max, num_timesteps, device):
-            _, _, self.betas = get_sigma_schedule(beta_min, beta_max, num_timesteps, device=device)
-            # we don't need the zeros
-            self.betas = self.betas.type(torch.float32)[1:]
-            self.alphas = 1 - self.betas
-            self.alphas_cumprod = torch.cumprod(self.alphas, 0)
-            self.alphas_cumprod_prev = torch.cat(
-                (torch.tensor([1.], dtype=torch.float32,
-                 device=device), self.alphas_cumprod[:-1]), 0
-            )
-            self.posterior_variance = self.betas * \
-                (1 - self.alphas_cumprod_prev) / (1 - self.alphas_cumprod)
-            self.sqrt_alphas_cumprod = torch.sqrt(self.alphas_cumprod)
-            self.sqrt_recip_alphas_cumprod = torch.rsqrt(self.alphas_cumprod)
-            self.sqrt_recipm1_alphas_cumprod = torch.sqrt(
-                1 / self.alphas_cumprod - 1)
-            self.posterior_mean_coef1 = (
-                self.betas * torch.sqrt(self.alphas_cumprod_prev) / (1 - self.alphas_cumprod))
-            self.posterior_mean_coef2 = (
-                (1 - self.alphas_cumprod_prev) * torch.sqrt(self.alphas) / (1 - self.alphas_cumprod))
-            self.posterior_log_variance_clipped = torch.log(
-                self.posterior_variance.clamp(min=1e-20))
-    def sample_posterior(coefficients, x_0, x_t, t):
-        def q_posterior(x_0, x_t, t):
-            mean = (
-                extract(coefficients.posterior_mean_coef1, t, x_t.shape) * x_0
-                + extract(coefficients.posterior_mean_coef2, t, x_t.shape) * x_t
-            )
-            var = extract(coefficients.posterior_variance, t, x_t.shape)
-            log_var_clipped = extract(
-                coefficients.posterior_log_variance_clipped, t, x_t.shape)
-            return mean, var, log_var_clipped
-        def p_sample(x_0, x_t, t):
-            mean, _, log_var = q_posterior(x_0, x_t, t)
-            noise = torch.randn_like(x_t)
-            nonzero_mask = (1 - (t == 0).type(torch.float32))
-            return mean + nonzero_mask[:, None, None, None] * torch.exp(0.5 * log_var) * noise
-        sample_x_pos = p_sample(x_0, x_t, t)
-        return sample_x_pos
-    
-    
-    if __name__ == '__main__':
-        beta_min = 0.1
-        beta_max = 20
-        num_timesteps = 4
-        x_0 = torch.randn(1,12,16,16).to(device)
-        x_t = torch.randn(1,12,16,16).to(device)
-        t = torch.full((x_0.size(0),), 1, dtype=torch.int64).to(x_0.device)
-        coefficients = Posterior_Coefficients(beta_min, beta_max, num_timesteps, device)
-        x_new = sample_posterior(coefficients, x_0, x_t, t.type(torch.int64))
-        print(x_new)
+    class IDWTFunction_2D_onnx_old(nn.Module):
+        @staticmethod
+        def forward(input_LL, input_LH, input_HL, input_HH):
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            r = 2
+            in_batch, in_channel, in_height, in_width = input_LL.size()
+            out_batch, out_channel, out_height, out_width = in_batch, in_channel, r * in_height, r * in_width
+            h = torch.zeros([out_batch, out_channel, out_height, out_width]).float().to(device)
+
+            h[:, :, 0::2, 0::2] = (input_LL + input_LH + input_HL + input_HH) / 2
+            h[:, :, 1::2, 0::2] = (input_LL - input_LH + input_HL - input_HH) / 2
+            h[:, :, 0::2, 1::2] = (input_LL + input_LH - input_HL - input_HH) / 2
+            h[:, :, 1::2, 1::2] = (input_LL - input_LH - input_HL + input_HH) / 2
+            return h
     "
     
-    with x_0, x_t is a matrix with type cv::Mat and have size (12,16,16).
-    t is a int number. 
+    with input_LL, input_LH, input_HL, input_HH is a matrix with type cv::Mat and have size (16,16).
     sample_posterior function also return cv::Mat value.
     You have to wrap all code into one class. 
     """

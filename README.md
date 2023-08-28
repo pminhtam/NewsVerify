@@ -17,3 +17,7 @@ conda env create -f environment.yml
 conda activate huggingface
 python main.py
 ```
+
+```shell
+python -m crawl_evidences.nli_fever_wiki_evidences --verbose 2
+```
