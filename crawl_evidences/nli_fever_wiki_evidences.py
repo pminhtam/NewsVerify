@@ -71,13 +71,17 @@ def process_claim(claim_evidence, nli_model, tokenizer,device="cpu", verbose=0):
     if label == "SUPPORTS":
         if num_entailment > num_contradiction:
             return "tp"
-        else:
+        elif num_entailment < num_contradiction:
             return "fp"
-    elif label == "REFUTES":
-        if num_entailment >= num_contradiction:
-            return "fn"
         else:
+            return 'same'
+    elif label == "REFUTES":
+        if num_entailment > num_contradiction:
+            return "fn"
+        elif num_entailment < num_contradiction:
             return "tn"
+        else:
+            return 'same'
     return 0
 import argparse
 def parse_args():
@@ -94,7 +98,7 @@ def parse_args():
 if __name__ == '__main__':
     args = parse_args()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    encoder_model = CrossEncoder(args.encoder)
+    # encoder_model = CrossEncoder(args.encoder)
     nli_model = AutoModelForSequenceClassification.from_pretrained(args.nli).to(device)
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
 
@@ -106,6 +110,7 @@ if __name__ == '__main__':
     fp = 0
     tn = 0
     fn = 0
+    same = 0
     for claim_evidence in claims:
         # print(claim_evidence)
         value = process_claim(claim_evidence, nli_model, tokenizer,device=device, verbose = args.verbose)
@@ -117,6 +122,8 @@ if __name__ == '__main__':
             tn += 1
         elif value == "fn":
             fn += 1
+        elif value == "same":
+            same += 1
     print("****************************************************************")
     print("****************************************************************")
     print("****************************************************************")
@@ -124,3 +131,4 @@ if __name__ == '__main__':
     print("fp  : ",fp)
     print("tn  : ",tn)
     print("fn  : ",fn)
+    print("same  : ",same)
