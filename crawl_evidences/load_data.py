@@ -83,12 +83,20 @@ def load_fever_data_with_wiki_evidence(data_path = '../fever_2018/train.jsonl', 
             continue
 if __name__ == '__main__':
     # preprocess_wiki()
-    data = []
     # data = []
+    data_supports = []
+    data_refutes = []
     for (instance,evidences) in load_fever_data_with_wiki_evidence():
         # print("================================================================")
         # print(instance['label_text'])
-        data.append({'claim': instance['claim'],'evidence_locate': instance['evidence'],'evidence': evidences})
+        if instance['label_text'] == 'SUPPORTS':
+            # data_supports.append({'claim': instance['claim'],'evidence_locate': instance['evidence'],'evidence': evidences})
+            data_supports.append({'instance': instance,'evidence': evidences})
+        elif instance['label_text'] == 'REFUTES':
+            data_refutes.append({'instance': instance,'evidence': evidences})
+        # data.append({'claim': instance['claim'],'evidence_locate': instance['evidence'],'evidence': evidences})
         # print("instance  : ",instance)
         # print("evidences  : ", evidences)
-    json.dump(data,open("fever_data.json",'w'))
+    # json.dump(data,open("fever_data.json",'w'))
+    json.dump(data_supports,open("fever_data_supports.json",'w'))
+    json.dump(data_refutes,open("fever_data_refutes.json",'w'))
