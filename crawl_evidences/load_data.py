@@ -39,13 +39,13 @@ def preprocess_wiki(data_path = '../fever_2018/train.jsonl', wiki_path="../fever
     df3 = pd.merge(evidences_df, wiki, on=['id'], how='inner')
     print(df3)
 
-sys.path.append('/mnt/E/dell_old/code/grff/chatgpt/naacl2018-fever/src/')
+sys.path.append('../../naacl2018-fever/src/')
 from common.dataset.reader import JSONLineReader
 from retrieval.fever_doc_db import FeverDocDB
 from common.dataset.data_set import DataSet as FEVERDataSet
 from retrieval.sentence import FEVERSentenceFormatter
 from rte.riedel.data import FEVERLabelSchema
-def load_fever_data_with_wiki_evidence(data_path = '../fever_2018/train.jsonl', db_path='/mnt/E/dell_old/code/grff/chatgpt/naacl2018-fever/data/fever/fever.db'):
+def load_fever_data_with_wiki_evidence(data_path = '../fever_2018/train.jsonl', db_path='../../naacl2018-fever/data/fever/fever.db'):
     jlr = JSONLineReader()
 
     docdb = FeverDocDB(db_path)
@@ -63,11 +63,14 @@ def load_fever_data_with_wiki_evidence(data_path = '../fever_2018/train.jsonl', 
         try:
             evidences = []
             # print("====================claim ============================ ", instance)
-            for page in set([ev[0] for ev in instance['evidence']]):
+            # for page in set([ev[0] for ev in instance['evidence']]):
+            for page in set([ev[0][0] for ev in instance['evidence']]):
                 # claim = instance['claim'].strip()
                 # print(page)
                 # print("................................................................")
-                paragraph = docdb.get_doc_text(page[0]).split(".")[page[1]]
+                # paragraph = docdb.get_doc_text(page[0]).split(" . ")[page[1]-1]
+                # paragraph = docdb.get_doc_text(page[0])
+                paragraph = docdb.get_doc_text(page)
                 # tokenized_paragraph = _wiki_tokenizer.tokenize(paragraph)
                 # print(paragraph)
                 evidences.append(paragraph)
@@ -80,8 +83,12 @@ def load_fever_data_with_wiki_evidence(data_path = '../fever_2018/train.jsonl', 
             continue
 if __name__ == '__main__':
     # preprocess_wiki()
+    data = []
+    # data = []
     for (instance,evidences) in load_fever_data_with_wiki_evidence():
-        print("================================================================")
-        print("instance  : ",instance)
-        print("evidences  : ", evidences)
-
+        # print("================================================================")
+        # print(instance['label_text'])
+        data.append({'claim': instance['claim'],'evidence_locate': instance['evidence'],'evidence': evidences})
+        # print("instance  : ",instance)
+        # print("evidences  : ", evidences)
+    json.dump(data,open("fever_data.json",'w'))
