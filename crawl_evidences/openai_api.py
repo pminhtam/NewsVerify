@@ -1,7 +1,7 @@
 import openai
 import numpy as np
 
-key = "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"
+key = ""
 
 openai.api_key = key
 
@@ -48,7 +48,8 @@ if __name__ == "__main__":
     # cv::Mat x_t(3, {12,16,16}, CV_32F);
     # int t = 1;
     # "
-    print(get_completion(prompt))
+    # print(get_completion(prompt))
+    print(get_completion("hello"))
 
     """
     /host/ubuntu/miniconda3/envs/huggingface/bin/python /mnt/E/dell_old/code/grff/chatgpt/NewsVerify/crawl_evidences/openai_api.py 

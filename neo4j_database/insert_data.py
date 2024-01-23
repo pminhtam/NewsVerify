@@ -33,19 +33,24 @@ for idx, drug in drug_names.iterrows():
     compound_id = drug[0]
     name = drug[1]
     print(compound_id, ":   name : ",name)
-    Drug_ID(compound_id=compound_id, name=name).save()
+    drug = Drug_ID.nodes.get_or_none(compound_id=compound_id)
+    if drug is None:
+        Drug_ID(compound_id=compound_id, name=name).save()
 # """
 effects = pd.read_csv("../data/meddra_all_se.tsv", sep="	", header=None)
 # print(effects)
 
 for idx, eff in effects.iterrows():
+    print(idx)
     compound_id = eff[0]
-    print(compound_id)
+    # print(compound_id)
     drug = Drug_ID.nodes.get_or_none(compound_id=compound_id)
-    print(drug)
+    # print(drug)
     if drug is None:
         print(compound_id)
     umls_id = eff[4]
     name = eff[5]
-    side_eff = Side_Effect(umls_id=umls_id, name=name).save()
+    side_eff = Side_Effect.nodes.get_or_none(umls_id=umls_id)
+    if side_eff is None:
+        side_eff = Side_Effect(umls_id=umls_id, name=name).save()
     drug.effect.connect(side_eff)
